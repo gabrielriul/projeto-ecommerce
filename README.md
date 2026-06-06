@@ -70,6 +70,8 @@ export MONGO_DB="ecommerce"
 npm run demo
 ```
 
+O repositório inclui um workflow do GitHub Actions (`.github/workflows/ci.yml`) que executa a demonstração contra um MongoDB real a cada push.
+
 A demonstração executa o fluxo completo da loja e também **casos de erro propositais** (campos obrigatórios ausentes, e-mail inválido/duplicado, estoque insuficiente, ids inválidos, registros inexistentes). Cada exceção capturada é registrada em `logs/erros.log` no formato:
 
 ```
