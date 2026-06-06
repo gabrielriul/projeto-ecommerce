@@ -1,10 +1,10 @@
-# Executa a demonstração da biblioteca contra um MongoDB real a cada push.
+# Testes da API (banco simulado) + smoke test contra MongoDB real.
 name: CI
 
 on: [push, workflow_dispatch]
 
 jobs:
-  demo:
+  testes:
     runs-on: ubuntu-latest
     services:
       mongo:
@@ -23,12 +23,10 @@ jobs:
           node-version: 22
       - name: Instalar dependências
         run: npm install
-      - name: Executar demonstração (casos de uso + casos de erro)
-        run: npm run demo
+      - name: Testes da API (node:test, banco simulado)
+        run: npm test
+      - name: Smoke test contra MongoDB real
+        run: bash test/smoke.sh
         env:
           MONGO_URI: mongodb://localhost:27017
-      - name: Verificar arquivo de log de exceções
-        run: |
-          test -s logs/erros.log
-          echo "=== logs/erros.log ==="
-          cat logs/erros.log
+          MONGO_DB: ecommerce_smoke

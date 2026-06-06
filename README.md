@@ -1,8 +1,15 @@
-# Projeto 1 — Biblioteca de acesso a SGBD (E-commerce)
+# Projeto 2 — Aplicação Web Express.js (E-commerce)
 
 Projeto da disciplina **EC48B-C71 — Programação Web Back-End** — Engenharia de Computação, UTFPR Campus Cornélio Procópio.
 
 Professores: Monique Emídio de Oliveira e Willian Massami Watanabe
+
+## Organização do repositório
+
+- **`main`** — Projeto 2: aplicação web Express.js (este README);
+- **branch [`projeto1`](https://github.com/gabrielriul/projeto-ecommerce/tree/projeto1)** — Projeto 1: biblioteca de acesso a SGBD, exatamente como entregue.
+
+O histórico da `main` preserva a evolução: commits do Projeto 1 seguidos dos commits do Projeto 2.
 
 ## Integrantes da equipe
 
@@ -10,117 +17,104 @@ Professores: Monique Emídio de Oliveira e Willian Massami Watanabe
 
 ## Descrição
 
-Biblioteca de classes em **Node.js** para acesso a SGBD (**MongoDB**, via driver oficial `mongodb`), com a temática **e-commerce** (como o Mercado Livre), com foco em armazenamento e busca de produtos em uma loja.
+Aplicação web (**API JSON**) desenvolvida com **Express.js** sobre a biblioteca de acesso a SGBD (MongoDB) implementada no [Projeto 1](https://github.com/gabrielriul/projeto-ecommerce/tree/projeto1) (branch `projeto1` deste repositório), mantendo a temática **e-commerce**. As classes do Projeto 1 estão em `lib/` e implementam as regras de negócio; a aplicação Express implementa as **rotas**, o **recebimento de parâmetros GET/POST** e o **uso de sessões** para garantir a autenticidade dos usuários.
 
-A biblioteca implementa **3 classes de armazenamento** (coleções no banco):
-
-| Classe    | Coleção    | Campos obrigatórios            | Principais buscas                                   |
-| --------- | ---------- | ------------------------------ | --------------------------------------------------- |
-| `Usuario` | `usuarios` | nome, email, senha             | por id, por e-mail, por nome                        |
-| `Produto` | `produtos` | nome, preco, categoria, estoque| por id, por nome, por categoria, por faixa de preço |
-| `Pedido`  | `pedidos`  | usuarioId, itens               | por id, por usuário, por status                     |
-
-Todas as classes implementam métodos de **inserção**, **busca**, **atualização** e **deleção**, com:
-
-- **Verificação de preenchimento de campos obrigatórios** (`utils/Validator.js`), lançando `ValidationError`;
-- **Tratamento de exceções** lançadas pelo driver do MongoDB (ex.: e-mail duplicado por índice único, falha de conexão), encapsuladas em `DatabaseError`/`NotFoundError`;
-- **Log das exceções capturadas em arquivo** (`utils/Logger.js` → `logs/erros.log`).
-
-Regras de negócio da temática: criação de pedido valida usuário, produtos e estoque, calcula o total com os preços atuais e baixa o estoque; cancelamento de pedido devolve o estoque.
-
-## Estrutura do projeto
+Arquitetura **MVC**: `routes/` (rotas) → `controllers/` (controle) → `lib/models/` (modelo, Projeto 1).
 
 ```
-projeto1-ecommerce/
-├── index.js              # ponto de entrada da biblioteca (exporta as classes)
-├── demo.js               # demonstração dos casos de uso (inclui casos de erro)
-├── config/
-│   └── Database.js       # conexão com o MongoDB (driver oficial)
-├── models/
-│   ├── Usuario.js        # entidade Usuário
-│   ├── Produto.js        # entidade Produto
-│   └── Pedido.js         # entidade Pedido
-├── utils/
-│   ├── Validator.js      # validação de campos obrigatórios
-│   └── Logger.js         # gravação de exceções em arquivo de log
-├── errors/
-│   ├── ValidationError.js
-│   ├── NotFoundError.js
-│   └── DatabaseError.js
-└── logs/
-    └── erros.log         # gerado em tempo de execução
+projeto2-ecommerce/
+├── server.js                 # ponto de entrada (conecta ao MongoDB e sobe o Express)
+├── app.js                    # configuração do Express (sessões, rotas, tratador de erros)
+├── lib/                      # biblioteca do Projeto 1 (Database, Usuario, Produto, Pedido...)
+├── controllers/              # AuthController, ProdutoController, PedidoController
+├── routes/                   # auth.js, produtos.js, pedidos.js
+├── middlewares/
+│   ├── autenticacao.js       # exige sessão ativa (401 sem login)
+│   └── tratadorDeErros.js    # exceções da lib -> respostas HTTP com mensagens de erro
+├── utils/Senha.js            # hash de senha (crypto nativo: scrypt + salt)
+├── test/                     # testes da API (node:test) + smoke test com MongoDB real
+└── requests.http             # requisições prontas para teste manual
 ```
+
+## Rotas
+
+| Método | Rota                  | Autenticação | Descrição                                              |
+| ------ | --------------------- | ------------ | ------------------------------------------------------ |
+| POST   | `/auth/cadastro`      | —            | Cadastra usuário `{nome, email, senha}`                |
+| POST   | `/auth/login`         | —            | Confere credenciais e **cria a sessão**                |
+| POST   | `/auth/logout`        | —            | Encerra a sessão                                       |
+| GET    | `/auth/perfil`        | sessão       | Dados do usuário logado                                |
+| GET    | `/produtos`           | —            | Busca: `?nome=`, `?categoria=`, `?precoMin=&precoMax=` |
+| GET    | `/produtos/:id`       | —            | Detalha um produto                                     |
+| POST   | `/produtos`           | sessão       | Cadastra produto `{nome, preco, categoria, estoque}`   |
+| PUT    | `/produtos/:id`       | sessão       | Atualiza produto                                       |
+| DELETE | `/produtos/:id`       | sessão       | Remove produto                                         |
+| POST   | `/pedidos`            | sessão       | Cria pedido `{itens:[{produtoId, quantidade}]}` — o usuário vem da sessão; valida estoque e calcula o total |
+| GET    | `/pedidos?status=`    | sessão       | Pedidos do usuário logado                              |
+| GET    | `/pedidos/:id`        | sessão       | Detalha pedido (somente do próprio usuário)            |
+| PATCH  | `/pedidos/:id/status` | sessão       | Atualiza status; cancelamento devolve o estoque        |
+| DELETE | `/pedidos/:id`        | sessão       | Remove pedido (somente do próprio usuário)             |
+
+Erros retornam JSON com mensagem clara e status adequado: `400` validação (inclui a lista de `campos`), `401` não autenticado, `403` recurso de outro usuário, `404` não encontrado, `500` falha interna. Exceções são registradas em `logs/erros.log` (rotina da biblioteca do Projeto 1).
 
 ## Pré-requisitos
 
-- [Node.js](https://nodejs.org/) 18 ou superior
-- [MongoDB](https://www.mongodb.com/) em execução (local ou remoto)
+- Node.js 18+ e MongoDB em execução
 
 ## Instalação e execução
 
 ```bash
-# 1. Instalar as dependências (somente o driver oficial do MongoDB)
 npm install
 
-# 2. (Opcional) Configurar a conexão — padrão: mongodb://localhost:27017 / banco "ecommerce"
+# Opcional (padrões: mongodb://localhost:27017 / banco "ecommerce")
 export MONGO_URI="mongodb://localhost:27017"
 export MONGO_DB="ecommerce"
+export SESSION_SECRET="um-segredo-forte"
 
-# 3. Executar a demonstração dos casos de uso
-npm run demo
+npm start          # produção: node server.js
+npm run dev        # desenvolvimento: nodemon server.js
 ```
 
-O repositório inclui um workflow do GitHub Actions (`.github/workflows/ci.yml`) que executa a demonstração contra um MongoDB real a cada push.
+Servidor em `http://localhost:3000`. Use o arquivo `requests.http` (VS Code REST Client) ou os exemplos abaixo:
 
-A demonstração executa o fluxo completo da loja e também **casos de erro propositais** (campos obrigatórios ausentes, e-mail inválido/duplicado, estoque insuficiente, ids inválidos, registros inexistentes). Cada exceção capturada é registrada em `logs/erros.log` no formato:
+```bash
+# Cadastro
+curl -X POST http://localhost:3000/auth/cadastro -H 'Content-Type: application/json' \
+  -d '{"nome":"Ana","email":"ana@email.com","senha":"senha123"}'
 
+# Login guardando o cookie de sessão
+curl -c cookies.txt -X POST http://localhost:3000/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"ana@email.com","senha":"senha123"}'
+
+# Rota protegida usando a sessão
+curl -b cookies.txt http://localhost:3000/auth/perfil
 ```
-[2026-06-05T17:40:00.000Z] [Usuario.inserir] ValidationError: Campos obrigatórios ausentes ou vazios: email, senha.
-Stack: ...
---------------------------------------------------------------------------------
+
+## Testes
+
+```bash
+npm test              # testes da API com banco simulado (node:test, sem dependências extras)
+bash test/smoke.sh    # fluxo completo via curl contra MongoDB real
 ```
 
-## Exemplo de uso da biblioteca
-
-```js
-const { Database, Usuario, Produto, Pedido } = require('./index');
-
-async function exemplo() {
-  const database = new Database(); // usa MONGO_URI / MONGO_DB ou os padrões
-  await database.conectar();
-
-  const usuarios = new Usuario(database);
-  const produtos = new Produto(database);
-  const pedidos = new Pedido(database);
-
-  const usuario = await usuarios.inserir({ nome: 'Ana', email: 'ana@email.com', senha: '123' });
-  const produto = await produtos.inserir({ nome: 'Mouse', preco: 89.9, categoria: 'informática', estoque: 10 });
-
-  const pedido = await pedidos.inserir({
-    usuarioId: usuario._id,
-    itens: [{ produtoId: produto._id, quantidade: 2 }],
-  });
-
-  console.log(await pedidos.buscarPorUsuario(usuario._id));
-
-  await database.desconectar();
-}
-
-exemplo();
-```
+O repositório inclui CI (GitHub Actions) que executa os testes e o smoke test contra um MongoDB 7 real a cada push.
 
 ## Critérios de avaliação atendidos
 
-- [x] Implementação dos casos de uso da temática selecionada (e-commerce);
-- [x] Pelo menos 3 classes de armazenamento (`usuarios`, `produtos`, `pedidos`);
-- [x] Verificação de preenchimento de campos obrigatórios;
-- [x] Tratamento de exceções lançadas pelas bibliotecas;
-- [x] Armazenamento de arquivos de log com as exceções capturadas.
+- [x] Casos de uso da temática (e-commerce): cadastro/busca de produtos, pedidos com estoque e total, fluxo de status;
+- [x] Rotas com recebimento de parâmetros **GET** (query/rota) e **POST** (corpo JSON/formulário);
+- [x] **Sessões** (`express-session`) garantindo a autenticidade dos usuários;
+- [x] **Rotina de login** (cadastro, login com hash de senha, logout, perfil) bloqueando rotas protegidas (401);
+- [x] Verificação de campos obrigatórios com **apresentação de mensagens de erro** (JSON, status 400 + campos);
+- [x] Tratamento de exceções e log em arquivo (biblioteca do Projeto 1).
 
 ## Dependências
 
-| Pacote    | Uso                                      |
-| --------- | ---------------------------------------- |
-| `mongodb` | Driver oficial do MongoDB para Node.js   |
+| Pacote            | Uso                                            |
+| ----------------- | ---------------------------------------------- |
+| `express`         | Framework web (rotas, middlewares)             |
+| `express-session` | Sessões de usuário (autenticidade após login)  |
+| `mongodb`         | Driver oficial do MongoDB (biblioteca do P1)   |
+| `nodemon` (dev)   | Reinício automático em desenvolvimento         |
 
-Nenhuma outra biblioteca externa é utilizada (logs e validações usam somente módulos nativos do Node.js).
+Hash de senha com o módulo **nativo** `crypto` (scrypt + salt) — nenhuma biblioteca externa adicional.

@@ -1,0 +1,92 @@
+### Arquivo de requisições para teste manual (VS Code REST Client / IntelliJ)
+### Execute na ordem. O cookie de sessão é gerenciado automaticamente.
+
+@base = http://localhost:3000
+
+### Documentação da API
+GET {{base}}/
+
+### 1. Cadastro de usuário
+POST {{base}}/auth/cadastro
+Content-Type: application/json
+
+{
+  "nome": "Ana Souza",
+  "email": "ana@email.com",
+  "senha": "senha123",
+  "telefone": "(43) 99999-0001"
+}
+
+### 2. Cadastro inválido (campos obrigatórios) -> 400 com mensagem
+POST {{base}}/auth/cadastro
+Content-Type: application/json
+
+{ "nome": "Sem Email" }
+
+### 3. Login (cria a sessão)
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@email.com", "senha": "senha123" }
+
+### 4. Login inválido -> 401
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{ "email": "ana@email.com", "senha": "errada" }
+
+### 5. Perfil do usuário logado (sessão)
+GET {{base}}/auth/perfil
+
+### 6. Cadastrar produto (requer login)
+POST {{base}}/produtos
+Content-Type: application/json
+
+{
+  "nome": "Notebook Gamer",
+  "descricao": "Placa de vídeo dedicada",
+  "preco": 4500,
+  "categoria": "Informática",
+  "estoque": 10
+}
+
+### 7. Cadastrar segundo produto
+POST {{base}}/produtos
+Content-Type: application/json
+
+{ "nome": "Mouse sem fio", "preco": 89.9, "categoria": "Informática", "estoque": 50 }
+
+### 8. Buscas com parâmetros GET
+GET {{base}}/produtos?nome=note
+
+###
+GET {{base}}/produtos?categoria=informática
+
+###
+GET {{base}}/produtos?precoMin=50&precoMax=250
+
+### 9. Criar pedido (usuário vem da sessão) — ajuste os ids
+POST {{base}}/pedidos
+Content-Type: application/json
+
+{
+  "itens": [
+    { "produtoId": "COLE_O_ID_DO_NOTEBOOK", "quantidade": 1 },
+    { "produtoId": "COLE_O_ID_DO_MOUSE", "quantidade": 2 }
+  ]
+}
+
+### 10. Meus pedidos
+GET {{base}}/pedidos
+
+### 11. Aprovar pedido — ajuste o id
+PATCH {{base}}/pedidos/COLE_O_ID_DO_PEDIDO/status
+Content-Type: application/json
+
+{ "status": "aprovado" }
+
+### 12. Logout
+POST {{base}}/auth/logout
+
+### 13. Após logout, rota protegida -> 401
+GET {{base}}/pedidos
