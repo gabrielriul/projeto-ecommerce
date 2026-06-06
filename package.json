@@ -7,7 +7,7 @@
     "demo": "node demo.js"
   },
   "keywords": ["utfpr", "ec48b", "nodejs", "mongodb", "e-commerce"],
-  "author": "Gabriel",
+  "author": "Gabriel Riul Perissé",
   "license": "MIT",
   "dependencies": {
     "mongodb": "^6.5.0"

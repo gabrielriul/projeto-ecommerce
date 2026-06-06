@@ -6,7 +6,7 @@ Professores: Monique Emídio de Oliveira e Willian Massami Watanabe
 
 ## Integrantes da equipe
 
-- Gabriel <!-- TODO: completar nome completo e RA -->
+- Gabriel Riul Perissé — RA 2064430
 
 ## Descrição
 
